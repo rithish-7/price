@@ -1,4 +1,5 @@
 # bot.py
+import os
 import requests
 import json
 import re
@@ -6,11 +7,15 @@ from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 from supabase import create_client
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # --- Telegram & Supabase setup ---
-BOT_TOKEN = "6419555637:AAEzowwC150dETXxWll63ZWcGWY3DfASnsQ"
-SUPABASE_URL = "https://pankqhfgydxchwgmwaha.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhbmtxaGZneWR4Y2h3Z213YWhhIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MDAyMDQ2OSwiZXhwIjoyMDc1NTk2NDY5fQ.SqaOmLcIDuHSO2oJ32FLXa-8BMfxaCo1YEa2womq2LU"  # Use service role for RLS bypass
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Use service role for RLS bypass
 
 # Initialize Supabase client lazily
 def get_supabase_client():
@@ -54,7 +59,7 @@ def get_affiliate_link(product_url):
         "convert_option": "convert_only"
     })
     headers = {
-        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGU1ZDRjYWUyYjRjNjFhZjNiMjE4YTciLCJlYXJua2FybyI6IjQ2MzA5OTkiLCJpYXQiOjE3NTk4OTM4ODl9.o0v30D_tCWoDHEj-aIrufnal6nMdD0URp9kPLB0OR1E',
+        'Authorization': f'Bearer {os.getenv("AFFILIATE_API_TOKEN")}',
         'Content-Type': 'application/json'
     }
 
