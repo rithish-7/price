@@ -1,5 +1,7 @@
 # bot.py
+
 import os
+import sys
 import requests
 import json
 import re
@@ -9,13 +11,23 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, Con
 from supabase import create_client
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
-# --- Telegram & Supabase setup ---
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")  # Use service role for RLS bypass
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")  
+SCRAPERAPI_KEY = os.getenv("SCRAPERAPI_KEY")
+
+# Validate BOT_TOKEN early and exit with a helpful message if missing
+if not BOT_TOKEN or not BOT_TOKEN.strip():
+    print("Error: BOT_TOKEN is not set. Please add BOT_TOKEN=your_bot_token to your .env or environment variables and restart the bot.")
+    sys.exit(1)
+
+# Basic sanity-check for token format (warn only)
+if not re.match(r'^\d+:[A-Za-z0-9_-]+$', BOT_TOKEN):
+    print("Warning: BOT_TOKEN doesn't match the expected Telegram token format. Double-check your token in .env or environment variables.")
 
 # Initialize Supabase client lazily
 def get_supabase_client():
@@ -26,13 +38,15 @@ def get_supabase_client():
         print(f"Error initializing Supabase client: {e}")
         return None
 
-# --- Scraper Function ---
+# --- Scraper Function (ScraperAPI Only) ---
 def get_flipkart_product_details(product_url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
     try:
-        r = requests.get(product_url, headers=headers)
+        # Use ScraperAPI for the request
+        params = {
+            "api_key": SCRAPERAPI_KEY,
+            "url": product_url,
+        }
+        r = requests.get("https://api.scraperapi.com/", params=params, timeout=60)
         r.raise_for_status()
         soup = BeautifulSoup(r.text, "html.parser")
 
@@ -51,7 +65,7 @@ def get_flipkart_product_details(product_url):
     except Exception as e:
         return {"error": str(e)}
 
-# --- Affiliate Link Function ---
+# --- Affiliate Link Function (Using ScraperAPI) ---
 def get_affiliate_link(product_url):
     api_url = "https://ekaro-api.affiliaters.in/api/converter/public"
     payload = json.dumps({
@@ -59,12 +73,12 @@ def get_affiliate_link(product_url):
         "convert_option": "convert_only"
     })
     headers = {
-        'Authorization': f'Bearer {os.getenv("AFFILIATE_API_TOKEN")}',
-        'Content-Type': 'application/json'
+        "Authorization": f"Bearer {os.getenv('AFFILIATE_API_TOKEN')}",
+        "Content-Type": "application/json"
     }
 
     try:
-        response = requests.post(api_url, headers=headers, data=payload)
+        response = requests.post(api_url, headers=headers, data=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
         return data.get("data") or product_url
